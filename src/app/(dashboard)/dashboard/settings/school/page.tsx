@@ -79,13 +79,20 @@ export default function SchoolSettingsPage() {
 
       if (logoFile) {
         const logoPath = `school-logos/${schoolId}_${Date.now()}_${logoFile.name}`
+        console.log("Upload started")
+        console.log("File selected", logoFile)
+        console.log("Page visibility", document.visibilityState)
+        console.log("Before upload")
+
         const { error: uploadErr } = await supabase.storage
           .from('student-documents')
           .upload(logoPath, logoFile, { upsert: true })
 
         if (uploadErr) {
+          console.log("Upload failed")
           throw new Error(`Logo upload failed: ${uploadErr.message}`)
         }
+        console.log("Upload success")
         uploadedLogoUrl = logoPath
       }
 
@@ -105,6 +112,7 @@ export default function SchoolSettingsPage() {
       if (updateErr) throw updateErr
 
       alert('School settings updated successfully!')
+      setLogoFile(null)
       await refreshSchool()
     } catch (err: any) {
       console.error('Failed to update school settings:', err)
@@ -219,13 +227,6 @@ export default function SchoolSettingsPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        id="logo-upload"
-                        onChange={handleLogoChange}
-                        className="hidden"
-                      />
                       <label
                         htmlFor="logo-upload"
                         className="inline-flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-750 font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer border border-indigo-150 active:scale-95 shadow-sm"
@@ -277,6 +278,14 @@ export default function SchoolSettingsPage() {
           </form>
         </div>
       </div>
+      {/* Hidden file uploader - always mounted at root of DOM */}
+      <input
+        type="file"
+        accept="image/*"
+        id="logo-upload"
+        onChange={handleLogoChange}
+        className="hidden"
+      />
     </>
   )
 }

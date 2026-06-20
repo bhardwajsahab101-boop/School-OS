@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect, useMemo, useState } from "react"
+import { use, useEffect, useMemo, useState, useRef } from "react"
 import Link from "next/link"
 import { supabase } from "../../../../lib/supabase-client"
 import { useSchool } from "../../../../lib/SchoolContext"
@@ -92,6 +92,85 @@ export default function StudentDetailsPage({ params }: { params: Promise<Params>
 
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  // Document Upload States
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isUploadOpen, setIsUploadOpen] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploadDocType, setUploadDocType] = useState<string>("Birth Certificate")
+  const [isUploading, setIsUploading] = useState(false)
+  const [pendingFile, setPendingFile] = useState<{ file: File; type: string } | null>(null)
+
+  // Restore upload modal state from sessionStorage
+  useEffect(() => {
+    if (studentId) {
+      const isRestoreOpen = sessionStorage.getItem(`edumanage_profile_upload_open_${studentId}`) === 'true'
+      if (isRestoreOpen) {
+        const docType = sessionStorage.getItem(`edumanage_profile_upload_type_${studentId}`) || 'Birth Certificate'
+        setUploadDocType(docType)
+        setIsUploadOpen(true)
+      }
+    }
+  }, [studentId])
+
+  // Persist upload modal state to sessionStorage
+  useEffect(() => {
+    if (studentId) {
+      if (isUploadOpen) {
+        sessionStorage.setItem(`edumanage_profile_upload_open_${studentId}`, 'true')
+        sessionStorage.setItem(`edumanage_profile_upload_type_${studentId}`, uploadDocType)
+      } else {
+        sessionStorage.removeItem(`edumanage_profile_upload_open_${studentId}`)
+        sessionStorage.removeItem(`edumanage_profile_upload_type_${studentId}`)
+      }
+    }
+  }, [isUploadOpen, uploadDocType, studentId])
+
+  // Trigger hidden input click
+  const triggerFileInput = (docType: string) => {
+    setUploadDocType(docType)
+    if (studentId) {
+      sessionStorage.setItem(`edumanage_profile_upload_type_${studentId}`, docType)
+    }
+    // Small timeout to ensure input element is active
+    setTimeout(() => {
+      fileInputRef.current?.click()
+    }, 0)
+  }
+
+  // Handle selected file
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0]
+      setSelectedFile(file)
+      if (!isUploadOpen) {
+        // Direct upload without modal
+        setPendingFile({ file, type: uploadDocType })
+      }
+    }
+  }
+
+  // Effect to process deferred/pending uploads once hydrated
+  useEffect(() => {
+    if (pendingFile && student && schoolId) {
+      const { file, type } = pendingFile
+      setPendingFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      void handleUploadDocument(file, type)
+    }
+  }, [pendingFile, student, schoolId])
+
+  const handleModalUploadSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedFile) {
+      alert('Please select a file to upload.')
+      return
+    }
+    const file = selectedFile
+    setSelectedFile(null)
+    setIsUploadOpen(false)
+    void handleUploadDocument(file, uploadDocType)
+  }
 
   // Load fees from Supabase + localStorage fallback
   const fetchFeesAndDocs = async (sId: string) => {
@@ -471,7 +550,32 @@ export default function StudentDetailsPage({ params }: { params: Promise<Params>
 
   // Upload Document Callback
   const handleUploadDocument = async (file: File, documentType: string = "Other") => {
-    if (!studentId || !student || !schoolId) return
+    // Validate file size and format first
+    const allowedExtensions = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'xlsx', 'webp', 'heic', 'heif', 'jfif'];
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    const isImg = file.type.startsWith('image/');
+    if (!allowedExtensions.includes(ext) && !isImg) {
+      alert("Invalid file format. Please upload PDF, Word, Excel, or image files only.");
+      return;
+    }
+
+    const maxSizeBytes = 10 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      alert(`File size exceeds the 10 MB limit. (Selected file: ${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
+      return;
+    }
+
+    if (!studentId || !student || !schoolId) {
+      // Defer uploader logic if page reloaded and details are still loading
+      setPendingFile({ file, type: documentType })
+      return
+    }
+
+    setIsUploading(true)
+    console.log("Upload started")
+    console.log("File selected", file)
+    console.log("Page visibility", document.visibilityState)
+    console.log("Before upload")
 
     const filePath = `${schoolId}/${studentId}/${Date.now()}_${file.name}`
 
@@ -484,6 +588,7 @@ export default function StudentDetailsPage({ params }: { params: Promise<Params>
       if (uploadError) {
         console.error("Storage upload error:", uploadError.message)
         alert(`Storage upload failed: ${uploadError.message}`)
+        console.log("Upload failed")
         return
       }
 
@@ -500,15 +605,22 @@ export default function StudentDetailsPage({ params }: { params: Promise<Params>
       if (insertError) {
         console.error("Database insert error:", insertError.message)
         alert(`Failed to save document metadata: ${insertError.message}`)
+        console.log("Upload failed")
         return
       }
 
+      console.log("Upload success")
       // 3. Refresh list from Supabase
       await fetchDocuments(studentId)
 
     } catch (err: any) {
       console.error("Failed to upload document:", err)
       alert(`An error occurred: ${err.message || err}`)
+      console.log("Upload failed")
+    } finally {
+      setIsUploading(false)
+      sessionStorage.removeItem(`edumanage_profile_upload_open_${studentId}`)
+      sessionStorage.removeItem(`edumanage_profile_upload_type_${studentId}`)
     }
   }
 
@@ -796,7 +908,7 @@ export default function StudentDetailsPage({ params }: { params: Promise<Params>
             feeStatus={feeStatus}
             onUpdateStudent={handleUpdateStudent}
             onAddFee={handleAddFee}
-            onUploadDocument={handleUploadDocument}
+            onOpenUploadDoc={() => setIsUploadOpen(true)}
             onExportReport={exportStudentReport}
             onDeleteStudent={handleDeleteStudent}
           />
@@ -822,9 +934,11 @@ export default function StudentDetailsPage({ params }: { params: Promise<Params>
 
               <DocumentsSection
                 documents={documents}
+                onTriggerUpload={triggerFileInput}
                 onUploadDocument={handleUploadDocument}
                 onDeleteDocument={handleDeleteDocument}
                 studentName={student.full_name ?? undefined}
+                isUploading={isUploading}
               />
             </div>
 
@@ -857,6 +971,94 @@ export default function StudentDetailsPage({ params }: { params: Promise<Params>
               />
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Hidden File Input - Always Mounted to survive browser process restarts */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      />
+
+      {/* ================= UPLOAD DOCUMENT MODAL - Always mounted relative to DOM loading state ================= */}
+      {isUploadOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsUploadOpen(false)} />
+            
+            <div className="relative inline-block w-full max-w-sm p-6 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl border border-slate-100">
+              <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-50">
+                <h3 className="text-lg font-bold text-slate-900">Upload Student Document</h3>
+                <button type="button" onClick={() => setIsUploadOpen(false)} className="text-slate-400 hover:text-slate-600 focus:outline-none">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              <form onSubmit={handleModalUploadSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Document Type</label>
+                  <select
+                    value={uploadDocType}
+                    onChange={(e) => setUploadDocType(e.target.value)}
+                    className="w-full px-3.5 py-2 border border-slate-200 text-slate-800 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer mb-3 select-none"
+                  >
+                    <option value="Birth Certificate">Birth Certificate</option>
+                    <option value="Aadhaar Card">Aadhaar Card</option>
+                    <option value="Transfer Certificate">Transfer Certificate</option>
+                    <option value="Student Photograph">Student Photograph</option>
+                    <option value="Medical Record">Medical Record</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Student File</label>
+                  <div 
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      fileInputRef.current?.click()
+                    }}
+                    className="border-2 border-dashed border-slate-200 hover:border-slate-300 rounded-xl p-5 text-center cursor-pointer transition-colors animate-pulse"
+                  >
+                    <svg className="w-6 h-6 mx-auto text-slate-400 mb-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    {selectedFile ? (
+                      <span className="text-xs font-bold text-indigo-600 truncate block max-w-xs mx-auto">
+                        {selectedFile.name}
+                      </span>
+                    ) : (
+                      <span className="text-xs font-semibold text-slate-500">
+                        Click here to browse files
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-4 flex gap-3 justify-end border-t border-slate-50 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFile(null)
+                      setIsUploadOpen(false)
+                    }}
+                    className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-tr from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-xl shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-[0.98] transition-all cursor-pointer"
+                  >
+                    Upload Document
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

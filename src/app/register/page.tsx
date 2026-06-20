@@ -32,6 +32,33 @@ export default function RegisterPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
+  // Hydrate state from sessionStorage to survive Android background process death
+  useEffect(() => {
+    setFullName(sessionStorage.getItem('edumanage_reg_fullName') || '')
+    setEmail(sessionStorage.getItem('edumanage_reg_email') || '')
+    setSchoolName(sessionStorage.getItem('edumanage_reg_schoolName') || '')
+    setSchoolPhone(sessionStorage.getItem('edumanage_reg_schoolPhone') || '')
+    setSchoolEmail(sessionStorage.getItem('edumanage_reg_schoolEmail') || '')
+    setSchoolAddress(sessionStorage.getItem('edumanage_reg_schoolAddress') || '')
+    setAcademicSession(sessionStorage.getItem('edumanage_reg_academicSession') || '2026-27 Session')
+    setThemeColor(sessionStorage.getItem('edumanage_reg_themeColor') || '#4f46e5')
+    const savedStep = sessionStorage.getItem('edumanage_reg_step')
+    if (savedStep) setStep(Number(savedStep))
+  }, [])
+
+  // Sync state to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem('edumanage_reg_fullName', fullName)
+    sessionStorage.setItem('edumanage_reg_email', email)
+    sessionStorage.setItem('edumanage_reg_schoolName', schoolName)
+    sessionStorage.setItem('edumanage_reg_schoolPhone', schoolPhone)
+    sessionStorage.setItem('edumanage_reg_schoolEmail', schoolEmail)
+    sessionStorage.setItem('edumanage_reg_schoolAddress', schoolAddress)
+    sessionStorage.setItem('edumanage_reg_academicSession', academicSession)
+    sessionStorage.setItem('edumanage_reg_themeColor', themeColor)
+    sessionStorage.setItem('edumanage_reg_step', String(step))
+  }, [fullName, email, schoolName, schoolPhone, schoolEmail, schoolAddress, academicSession, themeColor, step])
+
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0]
@@ -104,13 +131,20 @@ export default function RegisterPage() {
       let finalLogoPath = null
       if (logoFile && schoolId) {
         const logoPath = `school-logos/${schoolId}_${Date.now()}_${logoFile.name}`
+        console.log("Upload started")
+        console.log("File selected", logoFile)
+        console.log("Page visibility", document.visibilityState)
+        console.log("Before upload")
+
         const { error: uploadErr } = await supabase.storage
           .from('student-documents')
           .upload(logoPath, logoFile)
 
         if (uploadErr) {
           console.warn('Logo upload failed, proceeding without logo:', uploadErr.message)
+          console.log("Upload failed")
         } else {
+          console.log("Upload success")
           finalLogoPath = logoPath
           // Update logo URL reference in schools table
           const { error: updateErr } = await supabase
@@ -126,6 +160,17 @@ export default function RegisterPage() {
 
       alert('School registered successfully!')
       
+      // Clear sessionStorage items
+      sessionStorage.removeItem('edumanage_reg_fullName')
+      sessionStorage.removeItem('edumanage_reg_email')
+      sessionStorage.removeItem('edumanage_reg_schoolName')
+      sessionStorage.removeItem('edumanage_reg_schoolPhone')
+      sessionStorage.removeItem('edumanage_reg_schoolEmail')
+      sessionStorage.removeItem('edumanage_reg_schoolAddress')
+      sessionStorage.removeItem('edumanage_reg_academicSession')
+      sessionStorage.removeItem('edumanage_reg_themeColor')
+      sessionStorage.removeItem('edumanage_reg_step')
+
       // Save active school cached value
       localStorage.setItem('edumanage_active_school_id', schoolId)
       
@@ -295,13 +340,6 @@ Super admin is not admin of all schools he is owner of EduManage SaaS platform s
                           <span className="text-lg text-slate-300 font-bold">★</span>
                         )}
                       </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        id="logo-select"
-                        onChange={handleLogoChange}
-                        className="hidden"
-                      />
                       <label
                         htmlFor="logo-select"
                         className="bg-indigo-50 text-indigo-700 font-bold px-3.5 py-2 rounded-xl text-xs hover:bg-indigo-100 transition cursor-pointer select-none border border-indigo-100/20 active:scale-95"
@@ -357,6 +395,14 @@ Super admin is not admin of all schools he is owner of EduManage SaaS platform s
           )}
         </div>
       </main>
+      {/* Hidden file uploader - always mounted at root of DOM */}
+      <input
+        type="file"
+        accept="image/*"
+        id="logo-select"
+        onChange={handleLogoChange}
+        className="hidden"
+      />
     </div>
   )
 }

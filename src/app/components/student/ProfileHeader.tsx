@@ -21,7 +21,7 @@ interface ProfileHeaderProps {
   feeStatus: 'Paid' | 'Outstanding'
   onUpdateStudent: (updated: Partial<Student>) => Promise<void>
   onAddFee: (months: string[], amount: number, status: 'paid' | 'pending') => void
-  onUploadDocument: (file: File, documentType: string) => void
+  onOpenUploadDoc: () => void
   onExportReport: () => void
   onDeleteStudent: () => void
 }
@@ -32,14 +32,13 @@ export default function ProfileHeader({
   feeStatus,
   onUpdateStudent,
   onAddFee,
-  onUploadDocument,
+  onOpenUploadDoc,
   onExportReport,
   onDeleteStudent
 }: ProfileHeaderProps) {
   // Modal states
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isAddFeeOpen, setIsAddFeeOpen] = useState(false)
-  const [isUploadOpen, setIsUploadOpen] = useState(false)
   
   // Loading state
   const [isSaving, setIsSaving] = useState(false)
@@ -93,31 +92,7 @@ export default function ProfileHeader({
     })
   }
 
-  // File upload state
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [uploadDocType, setUploadDocType] = useState<string>("Birth Certificate")
 
-  // Load restored upload modal state from sessionStorage
-  useEffect(() => {
-    const isRestoreOpen = sessionStorage.getItem(`edumanage_profile_upload_open_${student.id}`) === 'true'
-    if (isRestoreOpen) {
-      const docType = sessionStorage.getItem(`edumanage_profile_upload_type_${student.id}`) || 'Birth Certificate'
-      setUploadDocType(docType)
-      setIsUploadOpen(true)
-    }
-  }, [student.id])
-
-  // Persist upload modal state to sessionStorage
-  useEffect(() => {
-    if (isUploadOpen) {
-      sessionStorage.setItem(`edumanage_profile_upload_open_${student.id}`, 'true')
-      sessionStorage.setItem(`edumanage_profile_upload_type_${student.id}`, uploadDocType)
-    } else {
-      sessionStorage.removeItem(`edumanage_profile_upload_open_${student.id}`)
-      sessionStorage.removeItem(`edumanage_profile_upload_type_${student.id}`)
-    }
-  }, [isUploadOpen, uploadDocType, student.id])
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -147,39 +122,7 @@ export default function ProfileHeader({
     setIsAddFeeOpen(false)
   }
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedFile) {
-      alert('Please select a file to upload.')
-      return
-    }
 
-    // Validate size and format
-    const allowedExtensions = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp', 'heic', 'heif', 'jfif'];
-    const ext = selectedFile.name.split('.').pop()?.toLowerCase() || '';
-    const isImg = selectedFile.type.startsWith('image/');
-    if (!allowedExtensions.includes(ext) && !isImg) {
-      alert("Invalid file format. Please upload PDF, Word documents, or image files only.");
-      return;
-    }
-
-    const maxSizeBytes = 10 * 1024 * 1024;
-    if (selectedFile.size > maxSizeBytes) {
-      alert(`File size exceeds the 10 MB limit. (Selected file: ${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)`);
-      return;
-    }
-
-    onUploadDocument(selectedFile, uploadDocType)
-    setSelectedFile(null)
-    setUploadDocType("Birth Certificate")
-    setIsUploadOpen(false)
-  }
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0])
-    }
-  }
 
   return (
     <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
@@ -248,6 +191,7 @@ export default function ProfileHeader({
         <div className="flex flex-wrap items-center justify-center lg:justify-end gap-3.5 shrink-0 border-t border-slate-50 pt-4 lg:pt-0 lg:border-t-0">
           {/* Edit Student */}
           <button
+            type="button"
             onClick={() => {
               setEditForm({
                 full_name: student.full_name || '',
@@ -271,6 +215,7 @@ export default function ProfileHeader({
 
           {/* Add Fee */}
           <button
+            type="button"
             onClick={() => setIsAddFeeOpen(true)}
             className="inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-xl font-bold text-xs shadow-sm hover:shadow active:scale-95 transition-all cursor-pointer"
           >
@@ -282,7 +227,8 @@ export default function ProfileHeader({
 
           {/* Upload Document */}
           <button
-            onClick={() => setIsUploadOpen(true)}
+            type="button"
+            onClick={onOpenUploadDoc}
             className="inline-flex items-center justify-center gap-1.5 bg-gradient-to-tr from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white px-4.5 py-2 rounded-xl font-bold text-xs shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-95 transition-all cursor-pointer"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -293,6 +239,7 @@ export default function ProfileHeader({
 
           {/* Export Report */}
           <button
+            type="button"
             onClick={onExportReport}
             className="inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-xl font-bold text-xs shadow-sm hover:shadow active:scale-95 transition-all cursor-pointer"
           >
@@ -305,6 +252,7 @@ export default function ProfileHeader({
           {/* Delete Student */}
           {userRole !== 'Teacher' && (
             <button
+              type="button"
               onClick={() => {
                 const confirmDelete = window.confirm(`Are you sure you want to permanently delete student ${student.full_name}? This will remove all their academic, attendance, and fee history.`)
                 if (confirmDelete) {
@@ -332,7 +280,7 @@ export default function ProfileHeader({
             <div className="relative inline-block w-full max-w-lg p-6 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl border border-slate-100">
               <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-50">
                 <h3 className="text-lg font-bold text-slate-900">Edit Student Profile</h3>
-                <button onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-slate-600 focus:outline-none">
+                <button type="button" onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-slate-600 focus:outline-none">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
@@ -463,7 +411,7 @@ export default function ProfileHeader({
             <div className="relative inline-block w-full max-w-md p-6 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl border border-slate-100">
               <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-50">
                 <h3 className="text-lg font-bold text-slate-900">Bill Tuition Fee</h3>
-                <button onClick={() => setIsAddFeeOpen(false)} className="text-slate-400 hover:text-slate-600 focus:outline-none">
+                <button type="button" onClick={() => setIsAddFeeOpen(false)} className="text-slate-400 hover:text-slate-600 focus:outline-none">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
@@ -593,92 +541,6 @@ export default function ProfileHeader({
                     className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-tr from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-xl shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-[0.98] transition-all cursor-pointer"
                   >
                     Generate {feeForm.months.length > 0 ? `${feeForm.months.length} Bills` : 'Bill'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= UPLOAD DOCUMENT MODAL ================= */}
-      {isUploadOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-            <div className="fixed inset-0 transition-opacity bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsUploadOpen(false)} />
-            
-            <div className="relative inline-block w-full max-w-sm p-6 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl border border-slate-100">
-              <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-50">
-                <h3 className="text-lg font-bold text-slate-900">Upload Student Document</h3>
-                <button onClick={() => setIsUploadOpen(false)} className="text-slate-400 hover:text-slate-600 focus:outline-none">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
-
-              <form onSubmit={handleUploadSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Document Type</label>
-                  <select
-                    value={uploadDocType}
-                    onChange={(e) => setUploadDocType(e.target.value)}
-                    className="w-full px-3.5 py-2 border border-slate-200 text-slate-800 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer mb-3 select-none"
-                  >
-                    <option value="Birth Certificate">Birth Certificate</option>
-                    <option value="Aadhaar Card">Aadhaar Card</option>
-                    <option value="Transfer Certificate">Transfer Certificate</option>
-                    <option value="Student Photograph">Student Photograph</option>
-                    <option value="Medical Record">Medical Record</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Student File</label>
-                  <div 
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      fileInputRef.current?.click()
-                    }}
-                    className="border-2 border-dashed border-slate-200 hover:border-slate-300 rounded-xl p-5 text-center cursor-pointer transition-colors"
-                  >
-                    <svg className="w-6 h-6 mx-auto text-slate-400 mb-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    {selectedFile ? (
-                      <span className="text-xs font-bold text-indigo-600 truncate block max-w-xs mx-auto">
-                        {selectedFile.name}
-                      </span>
-                    ) : (
-                      <span className="text-xs font-semibold text-slate-500">
-                        Click here to browse files
-                      </span>
-                    )}
-                  </div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  />
-                </div>
-
-                <div className="pt-4 flex gap-3 justify-end border-t border-slate-50 mt-6">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedFile(null)
-                      setIsUploadOpen(false)
-                    }}
-                    className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none transition-all cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-tr from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-xl shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-[0.98] transition-all cursor-pointer"
-                  >
-                    Upload Document
                   </button>
                 </div>
               </form>

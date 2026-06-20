@@ -69,6 +69,7 @@ export default function DocumentsDashboardPage() {
   const [dragActive, setDragActive] = useState(false)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [pendingFile, setPendingFile] = useState<{ file: File; studentId: string; type: string } | null>(null)
 
   // Bulk exporting loader
   const [isExporting, setIsExporting] = useState<string | null>(null)
@@ -172,6 +173,16 @@ export default function DocumentsDashboardPage() {
       }
     }
   }, [])
+
+  // Process deferred/pending upload once schoolId hydrates
+  useEffect(() => {
+    if (pendingFile && schoolId) {
+      const { file, studentId, type } = pendingFile
+      setPendingFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      void handleUpload(file, studentId, type)
+    }
+  }, [pendingFile, schoolId])
 
   // Derived list of classes
   const availableClasses = useMemo(() => {
@@ -405,7 +416,64 @@ export default function DocumentsDashboardPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0])
+      const file = e.target.files[0]
+      setSelectedFile(file)
+    }
+  }
+
+  const handleUpload = async (file: File, studentId: string, type: string) => {
+    if (!schoolId) {
+      setPendingFile({ file, studentId, type })
+      return
+    }
+
+    setIsUploading(true)
+    console.log("Upload started")
+    console.log("File selected", file)
+    console.log("Page visibility", document.visibilityState)
+    console.log("Before upload")
+
+    const filePath = `${schoolId}/${studentId}/${Date.now()}_${file.name}`
+
+    try {
+      // 1. Storage upload
+      const { error: uploadError } = await supabase.storage
+        .from("student-documents")
+        .upload(filePath, file)
+
+      if (uploadError) {
+        console.log("Upload failed")
+        throw uploadError
+      }
+
+      // 2. DB Insert
+      const { error: insertError } = await supabase
+        .from("documents")
+        .insert({
+          school_id: schoolId,
+          student_id: studentId,
+          document_type: type,
+          file_url: filePath
+        })
+
+      if (insertError) {
+        console.log("Upload failed")
+        throw insertError
+      }
+
+      console.log("Upload success")
+      alert("Document uploaded successfully!")
+      closeUploadModal()
+      await loadData() // refresh list
+    } catch (err: any) {
+      console.error("Upload failed:", err)
+      alert(`Upload failed: ${err.message || err}`)
+      console.log("Upload failed")
+    } finally {
+      setIsUploading(false)
+      sessionStorage.removeItem('edumanage_upload_modal_open')
+      sessionStorage.removeItem('edumanage_upload_student_id')
+      sessionStorage.removeItem('edumanage_upload_doc_type')
     }
   }
 
@@ -415,43 +483,9 @@ export default function DocumentsDashboardPage() {
       alert("All fields are required.")
       return
     }
-    if (!schoolId) {
-      alert("No active school selected.")
-      return
-    }
-
-    setIsUploading(true)
-    const filePath = `${schoolId}/${uploadStudentId}/${Date.now()}_${selectedFile.name}`
-
-    try {
-      // 1. Storage upload
-      const { error: uploadError } = await supabase.storage
-        .from("student-documents")
-        .upload(filePath, selectedFile)
-
-      if (uploadError) throw uploadError
-
-      // 2. DB Insert
-      const { error: insertError } = await supabase
-        .from("documents")
-        .insert({
-          school_id: schoolId,
-          student_id: uploadStudentId,
-          document_type: uploadDocType,
-          file_url: filePath
-        })
-
-      if (insertError) throw insertError
-
-      alert("Document uploaded successfully!")
-      closeUploadModal()
-      await loadData() // refresh list
-    } catch (err: any) {
-      console.error("Upload failed:", err)
-      alert(`Upload failed: ${err.message || err}`)
-    } finally {
-      setIsUploading(false)
-    }
+    const file = selectedFile
+    setSelectedFile(null)
+    void handleUpload(file, uploadStudentId, uploadDocType)
   }
 
   // Export ZIP package for a specific student
@@ -1017,14 +1051,6 @@ export default function DocumentsDashboardPage() {
                       </span>
                     )}
                   </div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    required
-                  />
                 </div>
 
                 {/* Footer Buttons */}
@@ -1052,6 +1078,14 @@ export default function DocumentsDashboardPage() {
         </div>
       )}
 
+      {/* Hidden input - always mounted at the top level of DOM */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      />
     </div>
   )
 }

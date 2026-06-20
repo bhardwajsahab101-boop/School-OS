@@ -75,20 +75,22 @@ export default function SuperAdminSchoolDetailPage({ params }: { params: Promise
         setStatus(schoolData.status || 'approved')
         setSubStatus(schoolData.subscription_status || 'active')
 
-        // Logo preview
-        if (schoolData.logo_url) {
-          if (schoolData.logo_url.startsWith('http')) {
-            setLogoPreview(schoolData.logo_url)
-          } else {
-            const { data: urlData } = await supabase.storage
-              .from('student-documents')
-              .createSignedUrl(schoolData.logo_url, 3600)
-            if (urlData?.signedUrl) {
-              setLogoPreview(urlData.signedUrl)
+        // Logo preview - do not overwrite if a file is already selected/previewed locally
+        if (!logoFile) {
+          if (schoolData.logo_url) {
+            if (schoolData.logo_url.startsWith('http')) {
+              setLogoPreview(schoolData.logo_url)
+            } else {
+              const { data: urlData } = await supabase.storage
+                .from('student-documents')
+                .createSignedUrl(schoolData.logo_url, 3600)
+              if (urlData?.signedUrl) {
+                setLogoPreview(urlData.signedUrl)
+              }
             }
+          } else {
+            setLogoPreview(null)
           }
-        } else {
-          setLogoPreview(null)
         }
       }
 
@@ -128,13 +130,20 @@ export default function SuperAdminSchoolDetailPage({ params }: { params: Promise
 
       if (logoFile) {
         const logoPath = `school-logos/${id}_${Date.now()}_${logoFile.name}`
+        console.log("Upload started")
+        console.log("File selected", logoFile)
+        console.log("Page visibility", document.visibilityState)
+        console.log("Before upload")
+
         const { error: uploadErr } = await supabase.storage
           .from('student-documents')
           .upload(logoPath, logoFile, { upsert: true })
 
         if (uploadErr) {
+          console.log("Upload failed")
           throw new Error(`Logo upload failed: ${uploadErr.message}`)
         }
+        console.log("Upload success")
         uploadedLogoUrl = logoPath
       }
 
@@ -156,6 +165,7 @@ export default function SuperAdminSchoolDetailPage({ params }: { params: Promise
       if (updateErr) throw updateErr
 
       showNotification('success', 'School settings updated successfully!')
+      setLogoFile(null)
       void loadSchoolData()
     } catch (err: any) {
       console.error('Failed to save settings:', err)
@@ -165,59 +175,58 @@ export default function SuperAdminSchoolDetailPage({ params }: { params: Promise
     }
   }
 
-  if (userRole !== 'SuperAdmin') {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-100">
-            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-          </div>
-          <h2 className="text-lg font-bold text-slate-800">Access Denied</h2>
-          <p className="text-sm text-slate-500 max-w-xs leading-relaxed">This module is reserved for platform-wide Super Administrators.</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="max-w-5xl mx-auto space-y-8 animate-pulse">
-        <div className="h-6 bg-slate-100 rounded w-1/4" />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="h-24 bg-slate-100 rounded-3xl" />
-          <div className="h-24 bg-slate-100 rounded-3xl" />
-          <div className="h-24 bg-slate-100 rounded-3xl" />
-          <div className="h-24 bg-slate-100 rounded-3xl" />
-        </div>
-        <div className="bg-white border border-slate-100 rounded-3xl p-8 space-y-4">
-          <div className="h-8 bg-slate-100 rounded w-1/3" />
-          <div className="h-44 bg-slate-100 rounded-2xl w-full" />
-        </div>
-      </div>
-    )
-  }
-
-  if (!school) {
-    return (
-      <div className="max-w-4xl mx-auto p-12 text-center bg-white border border-slate-200 rounded-3xl space-y-4 shadow-sm">
-        <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto border border-rose-100">
-          <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-        </div>
-        <h2 className="text-xl font-black text-slate-800">School Tenant Not Found</h2>
-        <p className="text-slate-500 max-w-sm mx-auto text-xs leading-relaxed font-semibold">The school identifier provided in the URL does not exist or has been deleted from the database.</p>
-        <Link
-          href="/dashboard/superadmin/schools"
-          className="inline-flex items-center justify-center font-bold px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-xs cursor-pointer text-slate-700"
-        >
-          Return to Schools Directory
-        </Link>
-      </div>
-    )
-  }
-
   return (
     <>
-      <ClientAuth />
+      {/* Hidden file uploader - always mounted at DOM root to survive mobile background kills */}
+      <input
+        type="file"
+        accept="image/*"
+        id="logo-upload"
+        onChange={handleLogoChange}
+        className="hidden"
+      />
+
+      {userRole !== 'SuperAdmin' ? (
+        <div className="flex items-center justify-center min-h-screen bg-slate-50">
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-100">
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            </div>
+            <h2 className="text-lg font-bold text-slate-800">Access Denied</h2>
+            <p className="text-sm text-slate-500 max-w-xs leading-relaxed">This module is reserved for platform-wide Super Administrators.</p>
+          </div>
+        </div>
+      ) : loading ? (
+        <div className="max-w-5xl mx-auto space-y-8 animate-pulse">
+          <div className="h-6 bg-slate-100 rounded w-1/4" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="h-24 bg-slate-100 rounded-3xl" />
+            <div className="h-24 bg-slate-100 rounded-3xl" />
+            <div className="h-24 bg-slate-100 rounded-3xl" />
+            <div className="h-24 bg-slate-100 rounded-3xl" />
+          </div>
+          <div className="bg-white border border-slate-100 rounded-3xl p-8 space-y-4">
+            <div className="h-8 bg-slate-100 rounded w-1/3" />
+            <div className="h-44 bg-slate-100 rounded-2xl w-full" />
+          </div>
+        </div>
+      ) : !school ? (
+        <div className="max-w-4xl mx-auto p-12 text-center bg-white border border-slate-200 rounded-3xl space-y-4 shadow-sm">
+          <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto border border-rose-100">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          </div>
+          <h2 className="text-xl font-black text-slate-800">School Tenant Not Found</h2>
+          <p className="text-slate-500 max-w-sm mx-auto text-xs leading-relaxed font-semibold">The school identifier provided in the URL does not exist or has been deleted from the database.</p>
+          <Link
+            href="/dashboard/superadmin/schools"
+            className="inline-flex items-center justify-center font-bold px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-xs cursor-pointer text-slate-700"
+          >
+            Return to Schools Directory
+          </Link>
+        </div>
+      ) : (
+        <>
+          <ClientAuth />
 
       <div className="max-w-5xl mx-auto space-y-8 relative">
         {/* Floating Notification */}
@@ -341,13 +350,6 @@ export default function SuperAdminSchoolDetailPage({ params }: { params: Promise
                     </div>
 
                     <div className="space-y-1">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        id="logo-upload"
-                        onChange={handleLogoChange}
-                        className="hidden"
-                      />
                       <label
                         htmlFor="logo-upload"
                         className="inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-750 font-bold px-3 py-1.5 rounded-xl text-[10px] transition-all cursor-pointer border border-indigo-150 shadow-sm active:scale-98"
@@ -445,6 +447,8 @@ export default function SuperAdminSchoolDetailPage({ params }: { params: Promise
           </div>
         </div>
       </div>
+        </>
+      )}
     </>
   )
 }

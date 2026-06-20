@@ -66,12 +66,7 @@ export default function LandingPage() {
             >
               Sign In
             </Link>
-            <Link
-              href="/login"
-              className="hidden sm:inline-flex items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white px-4.5 py-2 text-xs font-bold hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md shadow-indigo-500/10 active:scale-[0.98]"
-            >
-              Start Demo
-            </Link>
+
           </div>
         </div>
       </header>

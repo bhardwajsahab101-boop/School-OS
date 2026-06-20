@@ -132,9 +132,10 @@ export default function RegisterPage() {
       // Force reload page to dashboard
       window.location.href = '/dashboard'
 
-    } catch (err: any) {
-      console.error('Registration failed:', err)
-      alert(`Registration failed: ${err.message || err}`)
+    } catch (err) {
+      const error = err as Error
+      console.error('Registration failed:', error)
+      alert(`Registration failed: ${error.message || error}`)
     } finally {
       setLoading(false)
     }

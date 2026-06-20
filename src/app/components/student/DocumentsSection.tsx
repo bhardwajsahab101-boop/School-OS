@@ -146,11 +146,12 @@ export default function DocumentsSection({
   }
 
   const uploadFile = async (file: File) => {
-    // Validate file extension/type (PDF, JPG, PNG)
-    const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+    // Validate file extension/type
+    const allowedExtensions = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'xlsx', 'webp', 'heic', 'heif', 'jfif'];
     const ext = getFileExtension(file.name);
-    if (!allowedExtensions.includes(ext)) {
-      alert("Invalid file format. Please upload PDF, JPG, or PNG files only.");
+    const isImg = file.type.startsWith('image/');
+    if (!allowedExtensions.includes(ext) && !isImg) {
+      alert("Invalid file format. Please upload PDF, Word, Excel, or image files only.");
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }

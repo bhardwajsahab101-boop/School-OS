@@ -155,10 +155,11 @@ export default function ProfileHeader({
     }
 
     // Validate size and format
-    const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+    const allowedExtensions = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp', 'heic', 'heif', 'jfif'];
     const ext = selectedFile.name.split('.').pop()?.toLowerCase() || '';
-    if (!allowedExtensions.includes(ext)) {
-      alert("Invalid file format. Please upload PDF, JPG, or PNG files only.");
+    const isImg = selectedFile.type.startsWith('image/');
+    if (!allowedExtensions.includes(ext) && !isImg) {
+      alert("Invalid file format. Please upload PDF, Word documents, or image files only.");
       return;
     }
 

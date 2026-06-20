@@ -144,35 +144,104 @@ export default function LandingPage() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50 group hover:border-indigo-400/40 transition-colors">
-                      <div className="w-full h-32 bg-indigo-50/50 relative overflow-hidden flex items-center justify-center border-b border-slate-100">
-                        <img
-                          src="/dashboard-students.png"
-                          alt="Student page screenshot"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
+                    {/* Directory page Mockup */}
+                    <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50 group hover:border-indigo-400/40 transition-colors shadow-sm flex flex-col">
+                      <div className="w-full h-32 bg-slate-50 p-2.5 flex flex-col gap-1.5 border-b border-slate-100 select-none overflow-hidden justify-start">
+                        {/* Mini Search Header */}
+                        <div className="h-4 bg-white border border-slate-200 rounded px-1.5 flex items-center text-[7px] text-slate-400 gap-1 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
+                          <span>🔍</span>
+                          <span>Search students...</span>
+                        </div>
+                        {/* Student Row 1 */}
+                        <div className="flex items-center justify-between bg-white border border-slate-200/50 p-1.5 rounded-lg shadow-sm">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-md bg-indigo-100 text-indigo-750 font-black flex items-center justify-center text-[7px]">AK</div>
+                            <div className="flex flex-col leading-none">
+                              <span className="text-[8px] font-bold text-slate-800">Ayush Kumar</span>
+                              <span className="text-[6px] text-slate-400 mt-0.5">Roll No. 12</span>
+                            </div>
+                          </div>
+                          <span className="text-[6px] font-bold text-indigo-650 bg-indigo-50 px-1 py-0.5 rounded">Class 1</span>
+                        </div>
+                        {/* Student Row 2 */}
+                        <div className="flex items-center justify-between bg-white border border-slate-200/50 p-1.5 rounded-lg shadow-sm">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-md bg-violet-100 text-violet-750 font-black flex items-center justify-center text-[7px]">NV</div>
+                            <div className="flex flex-col leading-none">
+                              <span className="text-[8px] font-bold text-slate-800">Neha Verma</span>
+                              <span className="text-[6px] text-slate-400 mt-0.5">Roll No. 04</span>
+                            </div>
+                          </div>
+                          <span className="text-[6px] font-bold text-violet-650 bg-violet-50 px-1 py-0.5 rounded">Class 3</span>
+                        </div>
                       </div>
-                      <div className="p-2.5 text-xs font-bold text-slate-800 text-center">Directory page</div>
+                      <div className="p-2.5 text-xs font-bold text-slate-800 text-center bg-white">Directory page</div>
                     </div>
-                    <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50 group hover:border-indigo-400/40 transition-colors">
-                      <div className="w-full h-32 bg-indigo-50/50 relative overflow-hidden flex items-center justify-center border-b border-slate-100">
-                        <img
-                          src="/dashboard-attendance.png"
-                          alt="Attendance page screenshot"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
+
+                    {/* Attendance Mockup */}
+                    <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50 group hover:border-indigo-400/40 transition-colors shadow-sm flex flex-col">
+                      <div className="w-full h-32 bg-slate-50 p-2.5 flex flex-col gap-1.5 border-b border-slate-100 select-none overflow-hidden justify-start">
+                        {/* Mini Calendar Header */}
+                        <div className="h-4 flex items-center justify-between text-[7px] text-slate-450 font-extrabold uppercase border-b border-slate-200/50 pb-1">
+                          <span>Attendance logs</span>
+                          <span className="text-indigo-600">June 2026</span>
+                        </div>
+                        {/* Row 1 */}
+                        <div className="flex items-center justify-between bg-white border border-slate-200/50 p-1.5 rounded-lg shadow-sm">
+                          <span className="text-[8px] font-bold text-slate-800">Ayush K.</span>
+                          <div className="flex gap-1">
+                            <span className="w-3.5 h-3.5 rounded bg-emerald-500 text-white font-extrabold text-[6px] flex items-center justify-center shadow-sm shadow-emerald-500/10">P</span>
+                            <span className="w-3.5 h-3.5 rounded bg-emerald-500 text-white font-extrabold text-[6px] flex items-center justify-center shadow-sm shadow-emerald-500/10">P</span>
+                            <span className="w-3.5 h-3.5 rounded bg-rose-500 text-white font-extrabold text-[6px] flex items-center justify-center shadow-sm shadow-rose-500/10">A</span>
+                            <span className="w-3.5 h-3.5 rounded bg-emerald-500 text-white font-extrabold text-[6px] flex items-center justify-center shadow-sm shadow-emerald-500/10">P</span>
+                          </div>
+                        </div>
+                        {/* Row 2 */}
+                        <div className="flex items-center justify-between bg-white border border-slate-200/50 p-1.5 rounded-lg shadow-sm">
+                          <span className="text-[8px] font-bold text-slate-800">Neha V.</span>
+                          <div className="flex gap-1">
+                            <span className="w-3.5 h-3.5 rounded bg-emerald-500 text-white font-extrabold text-[6px] flex items-center justify-center shadow-sm shadow-emerald-500/10">P</span>
+                            <span className="w-3.5 h-3.5 rounded bg-emerald-500 text-white font-extrabold text-[6px] flex items-center justify-center shadow-sm shadow-emerald-500/10">P</span>
+                            <span className="w-3.5 h-3.5 rounded bg-emerald-500 text-white font-extrabold text-[6px] flex items-center justify-center shadow-sm shadow-emerald-500/10">P</span>
+                            <span className="w-3.5 h-3.5 rounded bg-emerald-500 text-white font-extrabold text-[6px] flex items-center justify-center shadow-sm shadow-emerald-500/10">P</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="p-2.5 text-xs font-bold text-slate-800 text-center">Attendance logs</div>
+                      <div className="p-2.5 text-xs font-bold text-slate-800 text-center bg-white">Attendance logs</div>
                     </div>
-                    <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50 group hover:border-indigo-400/40 transition-colors">
-                      <div className="w-full h-32 bg-indigo-50/50 relative overflow-hidden flex items-center justify-center border-b border-slate-100">
-                        <img
-                          src="/dashboard-fees.png"
-                          alt="Fee page screenshot"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
+
+                    {/* Fees Mockup */}
+                    <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50 group hover:border-indigo-400/40 transition-colors shadow-sm flex flex-col">
+                      <div className="w-full h-32 bg-slate-50 p-2.5 flex flex-col gap-1.5 border-b border-slate-100 select-none overflow-hidden justify-start">
+                        {/* Mini Fees Header */}
+                        <div className="h-4 flex items-center justify-between text-[7px] text-slate-455 font-extrabold uppercase border-b border-slate-200/50 pb-1">
+                          <span>Tuition billing</span>
+                          <span className="text-rose-500 font-black">₹12,000 Owed</span>
+                        </div>
+                        {/* Row 1 */}
+                        <div className="flex items-center justify-between bg-white border border-slate-200/50 p-1.5 rounded-lg shadow-sm">
+                          <div className="flex flex-col leading-none">
+                            <span className="text-[8px] font-bold text-slate-800">Class 1 Fees</span>
+                            <span className="text-[6px] text-slate-400 mt-0.5">Due Jun 15</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[8px] font-black text-slate-800">₹500</span>
+                            <span className="text-[6px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-1 py-0.5 rounded uppercase">Paid</span>
+                          </div>
+                        </div>
+                        {/* Row 2 */}
+                        <div className="flex items-center justify-between bg-white border border-slate-200/50 p-1.5 rounded-lg shadow-sm">
+                          <div className="flex flex-col leading-none">
+                            <span className="text-[8px] font-bold text-slate-800">Class 3 Fees</span>
+                            <span className="text-[6px] text-slate-400 mt-0.5">Due Jun 15</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[8px] font-black text-slate-800">₹700</span>
+                            <span className="text-[6px] font-black text-rose-700 bg-rose-50 border border-rose-100 px-1 py-0.5 rounded uppercase">Unpaid</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="p-2.5 text-xs font-bold text-slate-800 text-center">Billing & Fees</div>
+                      <div className="p-2.5 text-xs font-bold text-slate-800 text-center bg-white">Billing & Fees</div>
                     </div>
                   </div>
 

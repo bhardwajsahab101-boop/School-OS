@@ -113,12 +113,24 @@ export default function SuperAdminSchoolDetailPage({ params }: { params: Promise
     setTimeout(() => setNotification(null), 4000)
   }
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0]
-      setLogoFile(file)
-      setLogoPreview(URL.createObjectURL(file))
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("FILE CHANGE FIRED")
+
+    const file = e.target.files?.[0]
+
+    console.log("FILE:", file)
+
+    if (!file) {
+      console.log("NO FILE SELECTED")
+      return
     }
+
+    console.log("NAME:", file.name)
+    console.log("TYPE:", file.type)
+    console.log("SIZE:", file.size)
+
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file))
   }
 
   const handleSaveSettings = async (e: React.FormEvent) => {

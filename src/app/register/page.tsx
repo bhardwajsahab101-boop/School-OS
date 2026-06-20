@@ -59,12 +59,24 @@ export default function RegisterPage() {
     sessionStorage.setItem('edumanage_reg_step', String(step))
   }, [fullName, email, schoolName, schoolPhone, schoolEmail, schoolAddress, academicSession, themeColor, step])
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0]
-      setLogoFile(file)
-      setLogoPreview(URL.createObjectURL(file))
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("FILE CHANGE FIRED")
+
+    const file = e.target.files?.[0]
+
+    console.log("FILE:", file)
+
+    if (!file) {
+      console.log("NO FILE SELECTED")
+      return
     }
+
+    console.log("NAME:", file.name)
+    console.log("TYPE:", file.type)
+    console.log("SIZE:", file.size)
+
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file))
   }
 
   const handleNextStep = (e: React.FormEvent) => {

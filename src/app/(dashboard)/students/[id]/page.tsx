@@ -139,14 +139,26 @@ export default function StudentDetailsPage({ params }: { params: Promise<Params>
   }
 
   // Handle selected file
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0]
-      setSelectedFile(file)
-      if (!isUploadOpen) {
-        // Direct upload without modal
-        setPendingFile({ file, type: uploadDocType })
-      }
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("FILE CHANGE FIRED")
+
+    const file = e.target.files?.[0]
+
+    console.log("FILE:", file)
+
+    if (!file) {
+      console.log("NO FILE SELECTED")
+      return
+    }
+
+    console.log("NAME:", file.name)
+    console.log("TYPE:", file.type)
+    console.log("SIZE:", file.size)
+
+    setSelectedFile(file)
+    if (!isUploadOpen) {
+      // Direct upload without modal
+      setPendingFile({ file, type: uploadDocType })
     }
   }
 

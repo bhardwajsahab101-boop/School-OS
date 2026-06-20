@@ -414,11 +414,23 @@ export default function DocumentsDashboardPage() {
     }
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0]
-      setSelectedFile(file)
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("FILE CHANGE FIRED")
+
+    const file = e.target.files?.[0]
+
+    console.log("FILE:", file)
+
+    if (!file) {
+      console.log("NO FILE SELECTED")
+      return
     }
+
+    console.log("NAME:", file.name)
+    console.log("TYPE:", file.type)
+    console.log("SIZE:", file.size)
+
+    setSelectedFile(file)
   }
 
   const handleUpload = async (file: File, studentId: string, type: string) => {

@@ -3,6 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 let adminClient: ReturnType<typeof createClient> | null = null
 
 export function getSupabaseAdmin() {
+  if (typeof window !== 'undefined') {
+    throw new Error('Supabase Admin client can only be used on the server side.')
+  }
   if (adminClient) return adminClient
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL

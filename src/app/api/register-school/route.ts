@@ -1,17 +1,30 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest } from 'next/server'
 import { getSupabaseAdmin } from '../../../lib/supabase-admin'
+
+interface RegisterRequestBody {
+  email?: string
+  password?: string
+  fullName?: string
+  schoolName?: string
+  academicSession?: string
+  schoolPhone?: string
+  schoolEmail?: string
+  schoolAddress?: string
+  themeColor?: string
+}
 
 export async function POST(request: NextRequest) {
   let authUserId: string | null = null
   let schoolId: string | null = null
   let supabaseAdmin: any = null
 
-  let requestBody: any = {}
+  let requestBody: RegisterRequestBody = {}
   try {
-    requestBody = await request.json()
-  } catch (e) {
+    requestBody = await request.json() as RegisterRequestBody
+  } catch (_e) {
     return Response.json(
-      { error: 'Invalid JSON request body.' },
+      { success: false, error: 'Invalid JSON request body.' },
       { status: 400 }
     )
   }
@@ -31,14 +44,14 @@ export async function POST(request: NextRequest) {
   // Input Validation
   if (!email || !password || !fullName || !schoolName || !academicSession) {
     return Response.json(
-      { error: 'Missing required registration fields (email, password, fullName, schoolName, academicSession).' },
+      { success: false, error: 'Missing required registration fields (email, password, fullName, schoolName, academicSession).' },
       { status: 400 }
     )
   }
 
   if (password.length < 6) {
     return Response.json(
-      { error: 'Password must be at least 6 characters long.' },
+      { success: false, error: 'Password must be at least 6 characters long.' },
       { status: 400 }
     )
   }
@@ -176,8 +189,9 @@ export async function POST(request: NextRequest) {
       userId: authUserId
     })
 
-  } catch (err: any) {
-    console.error('REGISTRATION FLOW EXCEPTION:', err.message || err)
+  } catch (err) {
+    const error = err as Error
+    console.error('REGISTRATION FLOW EXCEPTION:', error.message || error)
 
     // TRANSACTION-LIKE CLEANUP / ROLLBACK
     console.group('ROLLBACK: Cleaning up created tenant records...')
@@ -212,7 +226,7 @@ export async function POST(request: NextRequest) {
     console.groupEnd()
 
     return Response.json(
-      { error: err.message || 'Onboarding failed due to internal error.' },
+      { success: false, error: error.message || 'Onboarding failed due to internal error.' },
       { status: 500 }
     )
   }

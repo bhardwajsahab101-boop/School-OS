@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import { useSchool } from '../../../lib/SchoolContext'
 
@@ -16,6 +17,8 @@ type StudentRow = {
 
 export default function StudentsPage() {
   const { schoolId } = useSchool()
+  const searchParams = useSearchParams()
+  const initialSearch = searchParams ? (searchParams.get('search') || '') : ''
 
   const [fullName, setFullName] = useState('')
   const [parentName, setParentName] = useState('')
@@ -38,9 +41,15 @@ export default function StudentsPage() {
 
   const [students, setStudents] = useState<StudentRow[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm, setSearchTerm] = useState(initialSearch)
   const [selectedClass, setSelectedClass] = useState<string>('all')
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (searchParams) {
+      setSearchTerm(searchParams.get('search') || '')
+    }
+  }, [searchParams])
   const [isExporting, setIsExporting] = useState(false)
   const [classesList, setClassesList] = useState<{ id: string; name: string }[]>([])
   const [userRole, setUserRole] = useState<string | null>(null)

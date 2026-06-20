@@ -6,10 +6,44 @@ import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { useSchool } from '../../lib/SchoolContext'
 
+type Activity = {
+  id: string
+  title: string
+  subtitle: string
+  timestamp: string
+  type: 'document' | 'fee' | 'admission'
+}
+
+function formatTimeAgo(dateString: string): string {
+  try {
+    const now = new Date()
+    const past = new Date(dateString)
+    const diffMs = now.getTime() - past.getTime()
+    if (isNaN(diffMs) || diffMs < 0) return 'Just now'
+    
+    const diffMins = Math.floor(diffMs / 60000)
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`
+    
+    const diffHours = Math.floor(diffMins / 60)
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+    
+    const diffDays = Math.floor(diffHours / 24)
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays} days ago`
+    
+    return past.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  } catch (e) {
+    return 'Recently'
+  }
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [navbarSearch, setNavbarSearch] = useState('')
   const pathname = usePathname()
   const router = useRouter()
 
@@ -40,6 +74,110 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     }
   }, [userRole, pathname, router])
+
+  useEffect(() => {
+    if (!schoolId) {
+      setActivities([])
+      return
+    }
+    
+    async function fetchActivities() {
+      try {
+        // Fetch 3 most recent student admissions
+        const { data: recentAdmissions } = await supabase
+          .from('students')
+          .select('id, full_name, created_at')
+          .eq('school_id', schoolId)
+          .order('created_at', { ascending: false })
+          .limit(3)
+
+        // Fetch 3 most recent document uploads
+        const { data: recentDocs } = await supabase
+          .from('documents')
+          .select('id, document_type, created_at, student_id')
+          .eq('school_id', schoolId)
+          .order('created_at', { ascending: false })
+          .limit(3)
+
+        // Fetch 3 most recent fee records
+        const { data: recentFees } = await supabase
+          .from('fees')
+          .select('id, amount, status, created_at, month, student_id')
+          .eq('school_id', schoolId)
+          .order('created_at', { ascending: false })
+          .limit(3)
+
+        // Gather all unique student IDs to query full names
+        const studentIds = Array.from(new Set([
+          ...(recentDocs || []).map(d => d.student_id),
+          ...(recentFees || []).map(f => f.student_id)
+        ].filter(Boolean)))
+
+        const studentMap: Record<string, string> = {}
+        if (studentIds.length > 0) {
+          const { data: studentNames } = await supabase
+            .from('students')
+            .select('id, full_name')
+            .in('id', studentIds)
+          
+          if (studentNames) {
+            studentNames.forEach(s => {
+              studentMap[s.id] = s.full_name
+            })
+          }
+        }
+
+        const combined: Activity[] = []
+
+        if (recentAdmissions) {
+          recentAdmissions.forEach(a => {
+            combined.push({
+              id: `admission-${a.id}`,
+              title: 'New Student Registered',
+              subtitle: `${a.full_name}`,
+              timestamp: a.created_at || new Date().toISOString(),
+              type: 'admission'
+            })
+          })
+        }
+
+        if (recentDocs) {
+          recentDocs.forEach(d => {
+            const studentName = studentMap[d.student_id] || 'Student'
+            combined.push({
+              id: `doc-${d.id}`,
+              title: `${d.document_type || 'Document'} Uploaded`,
+              subtitle: `${studentName}`,
+              timestamp: d.created_at || new Date().toISOString(),
+              type: 'document'
+            })
+          })
+        }
+
+        if (recentFees) {
+          recentFees.forEach(f => {
+            const studentName = studentMap[f.student_id] || 'Student'
+            const action = f.status === 'paid' ? 'Collected' : 'Billed'
+            combined.push({
+              id: `fee-${f.id}`,
+              title: `${f.month || 'Fee'} ${action}`,
+              subtitle: `${studentName} • ₹${f.amount}`,
+              timestamp: f.created_at || new Date().toISOString(),
+              type: 'fee'
+            })
+          })
+        }
+
+        // Sort combined list by timestamp descending
+        combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        setActivities(combined.slice(0, 5))
+      } catch (err) {
+        console.error('DashboardLayout: Error loading recent activities:', err)
+      }
+    }
+
+    void fetchActivities()
+  }, [schoolId])
 
   const navLinks = [
     { 
@@ -339,14 +477,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="md:hidden font-black text-sm text-slate-800">EduManage ERP</span>
           </div>
 
-          <div className="flex items-center gap-4">
-            {/* Search Input */}
+          <div className="flex items-center gap-4">             {/* Search Input */}
             <div className="hidden sm:flex items-center bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:bg-white focus-within:border-indigo-400/80 transition-all relative">
               <svg className="text-slate-400 shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               <input 
                 type="text" 
                 placeholder="Search students, billing..." 
                 className="bg-transparent border-none outline-none text-xs ml-2 w-48 placeholder-slate-400 text-slate-700 focus:outline-none"
+                value={navbarSearch}
+                onChange={(e) => setNavbarSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && navbarSearch.trim()) {
+                    router.push(`/students?search=${encodeURIComponent(navbarSearch.trim())}`)
+                  }
+                }}
               />
               <span className="text-[9px] font-black text-slate-400 bg-slate-100 border border-slate-200/60 px-1.5 py-0.2 rounded-md ml-2 select-none">⌘K</span>
             </div>
@@ -365,7 +509,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
                   <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
                 </svg>
-                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
+                {activities.length > 0 && (
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
+                )}
               </button>
 
               {isNotificationsOpen && (
@@ -375,30 +521,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 >
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-2">
                     <span className="text-xs font-black text-slate-800">Recent Activity Logs</span>
-                    <span className="text-[9px] font-black bg-indigo-50 text-indigo-750 px-2 py-0.5 rounded-full">3 New</span>
+                    <span className="text-[9px] font-black bg-indigo-50 text-indigo-750 px-2 py-0.5 rounded-full">{activities.length} Logs</span>
                   </div>
-                  <div className="space-y-3.5 pt-1">
-                    <div className="flex gap-3 text-left">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-1.5 shrink-0" />
-                      <div>
-                        <span className="text-[11px] font-bold text-slate-700 block">Birth Certificate Uploaded</span>
-                        <span className="text-[9px] font-bold text-slate-400 block mt-0.2">Khushi Sharma • 5 mins ago</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-3 text-left">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 shrink-0" />
-                      <div>
-                        <span className="text-[11px] font-bold text-slate-700 block">Aadhaar Card Missing</span>
-                        <span className="text-[9px] font-bold text-slate-400 block mt-0.2">Ayush Kumar • 1 hour ago</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-3 text-left">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-                      <div>
-                        <span className="text-[11px] font-bold text-slate-700 block">Tuition Fee Collection</span>
-                        <span className="text-[9px] font-bold text-slate-400 block mt-0.2">Pooja Devi • Billed ₹2,500</span>
-                      </div>
-                    </div>
+                  <div className="space-y-3.5 pt-1 max-h-76 overflow-y-auto">
+                    {activities.length === 0 ? (
+                      <p className="text-[10px] text-slate-400 text-center py-4 font-semibold">No recent activity logs.</p>
+                    ) : (
+                      activities.map(act => {
+                        let dotColor = 'bg-indigo-600'
+                        if (act.type === 'fee' && act.title.includes('Billed')) {
+                          dotColor = 'bg-rose-500'
+                        } else if (act.type === 'fee') {
+                          dotColor = 'bg-emerald-500'
+                        } else if (act.type === 'admission') {
+                          dotColor = 'bg-violet-600'
+                        }
+                        
+                        return (
+                          <div key={act.id} className="flex gap-3 text-left">
+                            <span className={`w-1.5 h-1.5 rounded-full ${dotColor} mt-1.5 shrink-0`} />
+                            <div>
+                              <span className="text-[11px] font-bold text-slate-700 block">{act.title}</span>
+                              <span className="text-[9px] font-bold text-slate-400 block mt-0.2">
+                                {act.subtitle} • {formatTimeAgo(act.timestamp)}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })
+                    )}
                   </div>
                 </div>
               )}

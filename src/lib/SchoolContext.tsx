@@ -59,11 +59,13 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   async function loadSchoolData(overrideSchoolId?: string) {
+    console.log('SchoolContext: Starting loadSchoolData...', { overrideSchoolId })
     try {
       setIsLoading(true)
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session?.user) {
+        console.log('SchoolContext: No active session or user found.')
         setSchoolId(null)
         setSchoolName(null)
         setSchoolLogoUrl(null)
@@ -72,13 +74,14 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
         setMemberships([])
         setUserRole(null)
         setUserEmail(null)
-        setIsLoading(false)
         return
       }
 
+      console.log('SchoolContext: Active session found for email:', session.user.email)
       setUserEmail(session.user.email || null)
 
       // 1. Query profiles table (Using maybeSingle to handle null states gracefully)
+      console.log('SchoolContext: Fetching profile for user ID:', session.user.id)
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -86,31 +89,40 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle()
 
       if (profileError) {
-        console.warn('Failed to query profile details:', profileError.message)
+        console.warn('SchoolContext: Failed to query profile details:', profileError.message)
+      } else {
+        console.log('SchoolContext: Profile fetched successfully:', profileData)
       }
       setProfile(profileData || null)
 
       // 2. Query memberships
+      console.log('SchoolContext: Fetching memberships for user ID:', session.user.id)
       const { data: membershipsData, error: membershipsError } = await supabase
         .from('school_memberships')
         .select('*')
         .eq('user_id', session.user.id)
 
       if (membershipsError || !membershipsData || membershipsData.length === 0) {
-        console.warn('No school memberships found for user:', session.user.email, membershipsError?.message || '')
+        console.warn('SchoolContext: No school memberships found for user:', session.user.email, membershipsError?.message || '')
         setSchoolId(null)
         setMemberships([])
         setUserRole(null)
-        setIsLoading(false)
         return
       }
 
+      console.log('SchoolContext: Memberships fetched:', membershipsData)
+
       // Fetch names for schools in user's memberships
       const schoolIds = membershipsData.map(m => m.school_id)
-      const { data: schoolsData } = await supabase
+      console.log('SchoolContext: Fetching school names for IDs:', schoolIds)
+      const { data: schoolsData, error: schoolsError } = await supabase
         .from('schools')
         .select('id, name')
         .in('id', schoolIds)
+
+      if (schoolsError) {
+        console.warn('SchoolContext: Error fetching school names:', schoolsError.message)
+      }
 
       // Construct memberships list
       const membershipsWithNames = membershipsData.map(m => {
@@ -122,6 +134,7 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
       })
 
       setMemberships(membershipsWithNames)
+      console.log('SchoolContext: Memberships list resolved:', membershipsWithNames)
 
       // 3. Determine active school ID
       let activeId = overrideSchoolId
@@ -130,6 +143,9 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
         const cachedId = localStorage.getItem('edumanage_active_school_id')
         const isValidCached = membershipsWithNames.some(m => m.school_id === cachedId)
         activeId = isValidCached ? (cachedId as string) : (membershipsWithNames[0]?.school_id || null)
+        console.log('SchoolContext: Determined active ID from cache or first membership:', activeId)
+      } else {
+        console.log('SchoolContext: Using override school ID:', activeId)
       }
 
       if (activeId) {
@@ -139,44 +155,66 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
         // Get role in active school
         const activeMembership = membershipsWithNames.find(m => m.school_id === activeId)
         setUserRole(activeMembership ? activeMembership.role : null)
+        console.log('SchoolContext: Active school ID set in state:', activeId, 'Role:', activeMembership ? activeMembership.role : null)
       } else {
+        console.log('SchoolContext: No active school ID could be determined.')
         setSchoolId(null)
         setUserRole(null)
       }
 
       // 4. Fetch Active School Details
-      const { data: schoolData, error: schoolError } = await supabase
-        .from('schools')
-        .select('*')
-        .eq('id', activeId)
-        .single()
+      if (activeId) {
+        console.log('SchoolContext: Fetching school details for active school ID:', activeId)
+        const { data: schoolData, error: schoolError } = await supabase
+          .from('schools')
+          .select('*')
+          .eq('id', activeId)
+          .maybeSingle()
 
-      if (!schoolError && schoolData) {
-        setSchoolDetails(schoolData)
-        setSchoolName(schoolData.name)
+        if (!schoolError && schoolData) {
+          console.log('SchoolContext: School details fetched successfully:', schoolData)
+          setSchoolDetails(schoolData)
+          setSchoolName(schoolData.name)
 
-        if (schoolData.logo_url) {
-          if (schoolData.logo_url.startsWith('http')) {
-            setSchoolLogoUrl(schoolData.logo_url)
+          if (schoolData.logo_url) {
+            if (schoolData.logo_url.startsWith('http')) {
+              console.log('SchoolContext: School logo is external URL:', schoolData.logo_url)
+              setSchoolLogoUrl(schoolData.logo_url)
+            } else {
+              // Fetch signed logo URL from student-documents bucket
+              console.log('SchoolContext: Creating signed URL for logo:', schoolData.logo_url)
+              const { data: urlData, error: signedUrlError } = await supabase.storage
+                .from('student-documents')
+                .createSignedUrl(schoolData.logo_url, 3600)
+              
+              if (signedUrlError) {
+                console.warn('SchoolContext: Failed to create signed URL for logo:', signedUrlError.message)
+                setSchoolLogoUrl(null)
+              } else {
+                console.log('SchoolContext: Logo signed URL created:', urlData?.signedUrl)
+                setSchoolLogoUrl(urlData?.signedUrl || null)
+              }
+            }
           } else {
-            // Fetch signed logo URL from student-documents bucket
-            const { data: urlData } = await supabase.storage
-              .from('student-documents')
-              .createSignedUrl(schoolData.logo_url, 3600)
-            setSchoolLogoUrl(urlData?.signedUrl || null)
+            console.log('SchoolContext: School has no logo_url.')
+            setSchoolLogoUrl(null)
           }
         } else {
+          console.error('SchoolContext: Error fetching active school details:', schoolError?.message || 'No data found')
+          setSchoolDetails(null)
+          setSchoolName(null)
           setSchoolLogoUrl(null)
         }
       } else {
-        console.error('Error fetching active school details:', schoolError?.message)
+        console.log('SchoolContext: Skipping school query since activeId is null.')
         setSchoolDetails(null)
         setSchoolName(null)
         setSchoolLogoUrl(null)
       }
     } catch (e) {
-      console.error('Error loading school session state:', e)
+      console.error('SchoolContext: Error loading school session state:', e)
     } finally {
+      console.log('SchoolContext: Setting isLoading to false.')
       setIsLoading(false)
     }
   }
@@ -190,7 +228,9 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    void loadSchoolData()
+    const timer = setTimeout(() => {
+      void loadSchoolData()
+    }, 0)
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
@@ -210,6 +250,7 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => {
+      clearTimeout(timer)
       subscription.unsubscribe()
     }
   }, [])

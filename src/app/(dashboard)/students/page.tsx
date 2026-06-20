@@ -28,6 +28,14 @@ export default function StudentsPage() {
   const [admissionFeeAmount, setAdmissionFeeAmount] = useState('')
   const [admissionFeeStatus, setAdmissionFeeStatus] = useState('pending')
 
+  // Document uploads states
+  const [uploadDocs, setUploadDocs] = useState(false)
+  const [birthCertFile, setBirthCertFile] = useState<File | null>(null)
+  const [aadhaarFile, setAadhaarFile] = useState<File | null>(null)
+  const [tcFile, setTcFile] = useState<File | null>(null)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [uploadingDocs, setUploadingDocs] = useState(false)
+
   const [students, setStudents] = useState<StudentRow[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -286,6 +294,49 @@ export default function StudentsPage() {
     if (error) {
       alert(error.message)
     } else {
+      if (uploadDocs && newStudentData?.id) {
+        setUploadingDocs(true)
+        const docUploads = [
+          { file: birthCertFile, type: 'Birth Certificate' },
+          { file: aadhaarFile, type: 'Aadhaar Card' },
+          { file: tcFile, type: 'Transfer Certificate' },
+          { file: photoFile, type: 'Student Photograph' }
+        ]
+
+        for (const item of docUploads) {
+          if (item.file) {
+            try {
+              const filePath = `${schoolId}/${newStudentData.id}/${Date.now()}_${item.file.name}`
+              const { error: uploadError } = await supabase.storage
+                .from('student-documents')
+                .upload(filePath, item.file)
+
+              if (uploadError) {
+                console.error(`Failed to upload ${item.type} to storage:`, uploadError.message)
+                alert(`Failed to upload ${item.type}: ${uploadError.message}`)
+                continue
+              }
+
+              const { error: insertError } = await supabase
+                .from('documents')
+                .insert({
+                  school_id: schoolId,
+                  student_id: newStudentData.id,
+                  document_type: item.type,
+                  file_url: filePath
+                })
+
+              if (insertError) {
+                console.error(`Failed to insert database record for ${item.type}:`, insertError.message)
+              }
+            } catch (err) {
+              console.error(`Error processing ${item.type} upload:`, err)
+            }
+          }
+        }
+        setUploadingDocs(false)
+      }
+
       if (admissionFeeAmount && newStudentData?.id) {
         const amt = Number(admissionFeeAmount)
         if (!isNaN(amt) && amt > 0) {
@@ -332,6 +383,11 @@ export default function StudentsPage() {
       setAddress('')
       setAdmissionFeeAmount('')
       setAdmissionFeeStatus('pending')
+      setUploadDocs(false)
+      setBirthCertFile(null)
+      setAadhaarFile(null)
+      setTcFile(null)
+      setPhotoFile(null)
       setIsModalOpen(false)
     }
   }
@@ -727,6 +783,72 @@ export default function StudentsPage() {
                   </select>
                 </div>
               </div>
+
+              {/* Checkbox for document upload */}
+              <div className="pt-3 border-t border-slate-100">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={uploadDocs}
+                    onChange={(e) => setUploadDocs(e.target.checked)}
+                    className="w-4 h-4 text-indigo-600 border-slate-200 focus:ring-indigo-500 rounded"
+                  />
+                  <span className="text-sm font-bold text-slate-700">Upload compliance documents now?</span>
+                </label>
+              </div>
+
+              {/* Document inputs if checked */}
+              {uploadDocs && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4.5 bg-slate-50/50 rounded-2xl border border-slate-200/50 animate-in fade-in-50 duration-200">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Birth Certificate
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all cursor-pointer"
+                      onChange={(e) => setBirthCertFile(e.target.files?.[0] || null)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Aadhaar Card
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all cursor-pointer"
+                      onChange={(e) => setAadhaarFile(e.target.files?.[0] || null)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Transfer Certificate (TC)
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all cursor-pointer"
+                      onChange={(e) => setTcFile(e.target.files?.[0] || null)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Student Photograph
+                    </label>
+                    <input
+                      type="file"
+                      accept=".png,.jpg,.jpeg"
+                      className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all cursor-pointer"
+                      onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Sticky Footer */}
@@ -741,9 +863,10 @@ export default function StudentsPage() {
               <button
                 type="button"
                 onClick={handleAddStudent}
-                className="px-4.5 py-2.5 text-sm font-semibold text-white bg-gradient-to-tr from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 transition-all active:scale-[0.98] cursor-pointer"
+                disabled={uploadingDocs}
+                className="px-4.5 py-2.5 text-sm font-semibold text-white bg-gradient-to-tr from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-60"
               >
-                Save Student
+                {uploadingDocs ? 'Saving Student & Documents...' : 'Save Student'}
               </button>
             </div>
           </div>

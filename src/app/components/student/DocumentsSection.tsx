@@ -231,7 +231,11 @@ export default function DocumentsSection({
           </select>
 
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              fileInputRef.current?.click()
+            }}
             disabled={isUploading}
             className="inline-flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-650 hover:text-indigo-700 px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all cursor-pointer shadow-sm active:scale-[0.98] disabled:opacity-50 shrink-0"
           >
@@ -249,7 +253,7 @@ export default function DocumentsSection({
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
-        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.xlsx"
+        accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       />
 
       {/* Drag & Drop Zone */}
@@ -258,7 +262,11 @@ export default function DocumentsSection({
         onDragOver={handleDrag}
         onDragLeave={handleDrag}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          fileInputRef.current?.click()
+        }}
         className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all duration-200 ${
           dragActive
             ? 'border-indigo-500 bg-indigo-50/30'

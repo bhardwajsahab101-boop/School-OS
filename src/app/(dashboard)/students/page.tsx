@@ -50,6 +50,57 @@ export default function StudentsPage() {
       setSearchTerm(searchParams.get('search') || '')
     }
   }, [searchParams])
+
+  // Load restored registration form state from sessionStorage
+  useEffect(() => {
+    const isRestoreOpen = sessionStorage.getItem('edumanage_reg_modal_open') === 'true'
+    if (isRestoreOpen) {
+      setFullName(sessionStorage.getItem('edumanage_reg_fullName') || '')
+      setParentName(sessionStorage.getItem('edumanage_reg_parentName') || '')
+      setParentPhone(sessionStorage.getItem('edumanage_reg_parentPhone') || '')
+      setClassName(sessionStorage.getItem('edumanage_reg_className') || '')
+      setGender(sessionStorage.getItem('edumanage_reg_gender') || '')
+      setDateOfBirth(sessionStorage.getItem('edumanage_reg_dateOfBirth') || '')
+      setAdmissionDate(sessionStorage.getItem('edumanage_reg_admissionDate') || '')
+      setAddress(sessionStorage.getItem('edumanage_reg_address') || '')
+      setAdmissionFeeAmount(sessionStorage.getItem('edumanage_reg_feeAmount') || '')
+      setAdmissionFeeStatus(sessionStorage.getItem('edumanage_reg_feeStatus') || 'pending')
+      setUploadDocs(sessionStorage.getItem('edumanage_reg_uploadDocs') === 'true')
+      setIsModalOpen(true)
+    }
+  }, [])
+
+  // Persist registration form state to sessionStorage when states change
+  useEffect(() => {
+    if (isModalOpen) {
+      sessionStorage.setItem('edumanage_reg_modal_open', 'true')
+      sessionStorage.setItem('edumanage_reg_fullName', fullName)
+      sessionStorage.setItem('edumanage_reg_parentName', parentName)
+      sessionStorage.setItem('edumanage_reg_parentPhone', parentPhone)
+      sessionStorage.setItem('edumanage_reg_className', className)
+      sessionStorage.setItem('edumanage_reg_gender', gender)
+      sessionStorage.setItem('edumanage_reg_dateOfBirth', dateOfBirth)
+      sessionStorage.setItem('edumanage_reg_admissionDate', admissionDate)
+      sessionStorage.setItem('edumanage_reg_address', address)
+      sessionStorage.setItem('edumanage_reg_feeAmount', admissionFeeAmount)
+      sessionStorage.setItem('edumanage_reg_feeStatus', admissionFeeStatus)
+      sessionStorage.setItem('edumanage_reg_uploadDocs', String(uploadDocs))
+    } else {
+      // Clear sessionStorage when modal is closed
+      sessionStorage.removeItem('edumanage_reg_modal_open')
+      sessionStorage.removeItem('edumanage_reg_fullName')
+      sessionStorage.removeItem('edumanage_reg_parentName')
+      sessionStorage.removeItem('edumanage_reg_parentPhone')
+      sessionStorage.removeItem('edumanage_reg_className')
+      sessionStorage.removeItem('edumanage_reg_gender')
+      sessionStorage.removeItem('edumanage_reg_dateOfBirth')
+      sessionStorage.removeItem('edumanage_reg_admissionDate')
+      sessionStorage.removeItem('edumanage_reg_address')
+      sessionStorage.removeItem('edumanage_reg_feeAmount')
+      sessionStorage.removeItem('edumanage_reg_feeStatus')
+      sessionStorage.removeItem('edumanage_reg_uploadDocs')
+    }
+  }, [isModalOpen, fullName, parentName, parentPhone, className, gender, dateOfBirth, admissionDate, address, admissionFeeAmount, admissionFeeStatus, uploadDocs])
   const [isExporting, setIsExporting] = useState(false)
   const [classesList, setClassesList] = useState<{ id: string; name: string }[]>([])
   const [userRole, setUserRole] = useState<string | null>(null)
@@ -815,7 +866,7 @@ export default function StudentsPage() {
                     </label>
                     <input
                       type="file"
-                      accept=".pdf,.png,.jpg,.jpeg"
+                      accept="image/*,application/pdf"
                       className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all cursor-pointer"
                       onChange={(e) => setBirthCertFile(e.target.files?.[0] || null)}
                     />
@@ -827,7 +878,7 @@ export default function StudentsPage() {
                     </label>
                     <input
                       type="file"
-                      accept=".pdf,.png,.jpg,.jpeg"
+                      accept="image/*,application/pdf"
                       className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all cursor-pointer"
                       onChange={(e) => setAadhaarFile(e.target.files?.[0] || null)}
                     />
@@ -839,7 +890,7 @@ export default function StudentsPage() {
                     </label>
                     <input
                       type="file"
-                      accept=".pdf,.png,.jpg,.jpeg"
+                      accept="image/*,application/pdf"
                       className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all cursor-pointer"
                       onChange={(e) => setTcFile(e.target.files?.[0] || null)}
                     />
@@ -851,7 +902,7 @@ export default function StudentsPage() {
                     </label>
                     <input
                       type="file"
-                      accept=".png,.jpg,.jpeg"
+                      accept="image/*"
                       className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all cursor-pointer"
                       onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
                     />

@@ -159,6 +159,20 @@ export default function DocumentsDashboardPage() {
     void loadData()
   }, [schoolId])
 
+  useEffect(() => {
+    const isRestoreOpen = sessionStorage.getItem('edumanage_upload_modal_open') === 'true'
+    if (isRestoreOpen) {
+      const studentId = sessionStorage.getItem('edumanage_upload_student_id') || ''
+      const docType = sessionStorage.getItem('edumanage_upload_doc_type') || ''
+      if (studentId && docType) {
+        setUploadStudentId(studentId)
+        setUploadDocType(docType)
+        setIsUploadModalOpen(true)
+        setExpandedStudentId(studentId)
+      }
+    }
+  }, [])
+
   // Derived list of classes
   const availableClasses = useMemo(() => {
     return Array.from(new Set(students.map(s => s.class_name).filter(Boolean))).sort()
@@ -351,10 +365,23 @@ export default function DocumentsDashboardPage() {
   }
 
   // Direct upload handlers
+  const closeUploadModal = () => {
+    setSelectedFile(null)
+    setIsUploadModalOpen(false)
+    setUploadStudentId('')
+    setUploadDocType('')
+    sessionStorage.removeItem('edumanage_upload_modal_open')
+    sessionStorage.removeItem('edumanage_upload_student_id')
+    sessionStorage.removeItem('edumanage_upload_doc_type')
+  }
+
   const openUploadModal = (studentId: string, type: string) => {
     setUploadStudentId(studentId)
     setUploadDocType(type)
     setIsUploadModalOpen(true)
+    sessionStorage.setItem('edumanage_upload_modal_open', 'true')
+    sessionStorage.setItem('edumanage_upload_student_id', studentId)
+    sessionStorage.setItem('edumanage_upload_doc_type', type)
   }
 
   const handleDrag = (e: React.DragEvent) => {
@@ -417,10 +444,7 @@ export default function DocumentsDashboardPage() {
       if (insertError) throw insertError
 
       alert("Document uploaded successfully!")
-      setIsUploadModalOpen(false)
-      setSelectedFile(null)
-      setUploadStudentId('')
-      setUploadDocType('')
+      closeUploadModal()
       await loadData() // refresh list
     } catch (err: any) {
       console.error("Upload failed:", err)
@@ -922,7 +946,7 @@ export default function DocumentsDashboardPage() {
             <div 
               className="fixed inset-0 transition-opacity bg-slate-900/45 backdrop-blur-sm" 
               onClick={() => {
-                if (!isUploading) setIsUploadModalOpen(false)
+                if (!isUploading) closeUploadModal()
               }} 
             />
             
@@ -936,7 +960,7 @@ export default function DocumentsDashboardPage() {
                 </div>
                 <button 
                   onClick={() => {
-                    if (!isUploading) setIsUploadModalOpen(false)
+                    if (!isUploading) closeUploadModal()
                   }} 
                   className="text-slate-400 hover:text-slate-650 focus:outline-none p-1 rounded hover:bg-slate-50"
                   disabled={isUploading}
@@ -969,7 +993,11 @@ export default function DocumentsDashboardPage() {
                     onDragOver={handleDrag}
                     onDragLeave={handleDrag}
                     onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      fileInputRef.current?.click()
+                    }}
                     className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors ${
                       dragActive
                         ? 'border-indigo-500 bg-indigo-50/30'
@@ -980,7 +1008,7 @@ export default function DocumentsDashboardPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
                     {selectedFile ? (
-                      <span className="text-xs font-bold text-indigo-650 truncate block max-w-[220px] mx-auto" title={selectedFile.name}>
+                      <span className="text-xs font-bold text-indigo-655 truncate block max-w-[220px] mx-auto" title={selectedFile.name}>
                         {selectedFile.name}
                       </span>
                     ) : (
@@ -994,7 +1022,7 @@ export default function DocumentsDashboardPage() {
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     className="hidden"
-                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.xlsx"
+                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     required
                   />
                 </div>
@@ -1003,10 +1031,7 @@ export default function DocumentsDashboardPage() {
                 <div className="pt-4 flex gap-3.5 justify-end border-t border-slate-50 mt-6">
                   <button
                     type="button"
-                    onClick={() => {
-                      setSelectedFile(null)
-                      setIsUploadModalOpen(false)
-                    }}
+                    onClick={closeUploadModal}
                     disabled={isUploading}
                     className="px-4.5 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50"
                   >

@@ -98,6 +98,27 @@ export default function ProfileHeader({
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadDocType, setUploadDocType] = useState<string>("Birth Certificate")
 
+  // Load restored upload modal state from sessionStorage
+  useEffect(() => {
+    const isRestoreOpen = sessionStorage.getItem(`edumanage_profile_upload_open_${student.id}`) === 'true'
+    if (isRestoreOpen) {
+      const docType = sessionStorage.getItem(`edumanage_profile_upload_type_${student.id}`) || 'Birth Certificate'
+      setUploadDocType(docType)
+      setIsUploadOpen(true)
+    }
+  }, [student.id])
+
+  // Persist upload modal state to sessionStorage
+  useEffect(() => {
+    if (isUploadOpen) {
+      sessionStorage.setItem(`edumanage_profile_upload_open_${student.id}`, 'true')
+      sessionStorage.setItem(`edumanage_profile_upload_type_${student.id}`, uploadDocType)
+    } else {
+      sessionStorage.removeItem(`edumanage_profile_upload_open_${student.id}`)
+      sessionStorage.removeItem(`edumanage_profile_upload_type_${student.id}`)
+    }
+  }, [isUploadOpen, uploadDocType, student.id])
+
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
@@ -612,7 +633,11 @@ export default function ProfileHeader({
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Student File</label>
                   <div 
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      fileInputRef.current?.click()
+                    }}
                     className="border-2 border-dashed border-slate-200 hover:border-slate-300 rounded-xl p-5 text-center cursor-pointer transition-colors"
                   >
                     <svg className="w-6 h-6 mx-auto text-slate-400 mb-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -633,7 +658,7 @@ export default function ProfileHeader({
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     className="hidden"
-                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   />
                 </div>
 

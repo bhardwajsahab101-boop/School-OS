@@ -44,6 +44,15 @@ export default function SuperAdminSchoolDetailPage({ params }: { params: Promise
   const [status, setStatus] = useState<'pending' | 'approved' | 'suspended'>('approved')
   const [subStatus, setSubStatus] = useState<'trial' | 'active' | 'inactive'>('active')
 
+  // Diagnostics
+  useEffect(() => {
+    console.log("PAGE MOUNTED");
+  }, []);
+
+  useEffect(() => {
+    console.log("LOGO FILE STATE", logoFile);
+  }, [logoFile]);
+
   // Guard routing for non-SuperAdmins
   useEffect(() => {
     if (userRole && userRole !== 'SuperAdmin') {
@@ -114,6 +123,8 @@ export default function SuperAdminSchoolDetailPage({ params }: { params: Promise
   }
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("FILE INPUT CHANGED");
+    console.log(e.target.files);
     console.log("FILE CHANGE FIRED")
 
     const file = e.target.files?.[0]
@@ -129,6 +140,7 @@ export default function SuperAdminSchoolDetailPage({ params }: { params: Promise
     console.log("TYPE:", file.type)
     console.log("SIZE:", file.size)
 
+    console.log("SETTING FILE STATE", file);
     setLogoFile(file)
     setLogoPreview(URL.createObjectURL(file))
   }

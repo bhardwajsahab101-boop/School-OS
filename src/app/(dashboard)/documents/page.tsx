@@ -74,6 +74,15 @@ export default function DocumentsDashboardPage() {
   // Bulk exporting loader
   const [isExporting, setIsExporting] = useState<string | null>(null)
 
+  // Diagnostics
+  useEffect(() => {
+    console.log("PAGE MOUNTED");
+  }, []);
+
+  useEffect(() => {
+    console.log("SELECTED FILE STATE", selectedFile);
+  }, [selectedFile]);
+
   // Load data
   async function loadData() {
     if (!schoolId) return
@@ -415,6 +424,8 @@ export default function DocumentsDashboardPage() {
   }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("FILE INPUT CHANGED");
+    console.log(e.target.files);
     console.log("FILE CHANGE FIRED")
 
     const file = e.target.files?.[0]
@@ -430,6 +441,7 @@ export default function DocumentsDashboardPage() {
     console.log("TYPE:", file.type)
     console.log("SIZE:", file.size)
 
+    console.log("SETTING FILE STATE", file);
     setSelectedFile(file)
   }
 

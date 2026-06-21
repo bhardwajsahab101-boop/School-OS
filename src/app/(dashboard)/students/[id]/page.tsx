@@ -101,6 +101,15 @@ export default function StudentDetailsPage({ params }: { params: Promise<Params>
   const [isUploading, setIsUploading] = useState(false)
   const [pendingFile, setPendingFile] = useState<{ file: File; type: string } | null>(null)
 
+  // Diagnostics
+  useEffect(() => {
+    console.log("PAGE MOUNTED");
+  }, []);
+
+  useEffect(() => {
+    console.log("SELECTED FILE STATE", selectedFile);
+  }, [selectedFile]);
+
   // Restore upload modal state from sessionStorage
   useEffect(() => {
     if (studentId) {
@@ -140,6 +149,8 @@ export default function StudentDetailsPage({ params }: { params: Promise<Params>
 
   // Handle selected file
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("FILE INPUT CHANGED");
+    console.log(e.target.files);
     console.log("FILE CHANGE FIRED")
 
     const file = e.target.files?.[0]
@@ -155,6 +166,7 @@ export default function StudentDetailsPage({ params }: { params: Promise<Params>
     console.log("TYPE:", file.type)
     console.log("SIZE:", file.size)
 
+    console.log("SETTING FILE STATE", file);
     setSelectedFile(file)
     if (!isUploadOpen) {
       // Direct upload without modal

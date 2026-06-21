@@ -22,6 +22,15 @@ export default function SchoolSettingsPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
 
+  // Diagnostics
+  useEffect(() => {
+    console.log("PAGE MOUNTED");
+  }, []);
+
+  useEffect(() => {
+    console.log("LOGO FILE STATE", logoFile);
+  }, [logoFile]);
+
   useEffect(() => {
     if (schoolDetails) {
       setName(schoolDetails.name || '')
@@ -54,6 +63,8 @@ export default function SchoolSettingsPage() {
   }, [schoolDetails])
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("FILE INPUT CHANGED");
+    console.log(e.target.files);
     console.log("FILE CHANGE FIRED")
 
     const file = e.target.files?.[0]
@@ -69,6 +80,7 @@ export default function SchoolSettingsPage() {
     console.log("TYPE:", file.type)
     console.log("SIZE:", file.size)
 
+    console.log("SETTING FILE STATE", file);
     setLogoFile(file)
     setLogoPreview(URL.createObjectURL(file))
   }

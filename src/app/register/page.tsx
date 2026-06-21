@@ -32,6 +32,15 @@ export default function RegisterPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
+  // Diagnostics
+  useEffect(() => {
+    console.log("PAGE MOUNTED");
+  }, []);
+
+  useEffect(() => {
+    console.log("LOGO FILE STATE", logoFile);
+  }, [logoFile]);
+
   // Hydrate state from sessionStorage to survive Android background process death
   useEffect(() => {
     setFullName(sessionStorage.getItem('edumanage_reg_fullName') || '')
@@ -60,6 +69,8 @@ export default function RegisterPage() {
   }, [fullName, email, schoolName, schoolPhone, schoolEmail, schoolAddress, academicSession, themeColor, step])
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("FILE INPUT CHANGED");
+    console.log(e.target.files);
     console.log("FILE CHANGE FIRED")
 
     const file = e.target.files?.[0]
@@ -75,6 +86,7 @@ export default function RegisterPage() {
     console.log("TYPE:", file.type)
     console.log("SIZE:", file.size)
 
+    console.log("SETTING FILE STATE", file);
     setLogoFile(file)
     setLogoPreview(URL.createObjectURL(file))
   }

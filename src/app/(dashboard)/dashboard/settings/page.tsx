@@ -45,6 +45,15 @@ export default function SettingsPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
+  // Diagnostics
+  useEffect(() => {
+    console.log("PAGE MOUNTED");
+  }, []);
+
+  useEffect(() => {
+    console.log("LOGO FILE STATE", logoFile);
+  }, [logoFile]);
+
   // 2. Classes Management State
   const [classes, setClasses] = useState<ClassItem[]>([])
   const [newClassName, setNewClassName] = useState('')
@@ -358,6 +367,8 @@ export default function SettingsPage() {
 
   // Logo file change handler
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("FILE INPUT CHANGED");
+    console.log(e.target.files);
     console.log("FILE CHANGE FIRED")
 
     const file = e.target.files?.[0]
@@ -373,6 +384,7 @@ export default function SettingsPage() {
     console.log("TYPE:", file.type)
     console.log("SIZE:", file.size)
 
+    console.log("SETTING FILE STATE", file);
     setLogoFile(file)
     setLogoPreview(URL.createObjectURL(file))
   }
